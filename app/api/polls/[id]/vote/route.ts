@@ -2,11 +2,10 @@ import { supabase } from "@/lib/supabase";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const pollOptionId = params.id;
+  const { id: pollOptionId } = await params;
 
-  // We directly increment votes (simple approach like your question votes)
   const { data, error } = await supabase
     .from("poll_options")
     .select("votes")
@@ -23,7 +22,10 @@ export async function POST(
     .eq("id", pollOptionId);
 
   if (updateError) {
-    return Response.json({ error: updateError.message }, { status: 500 });
+    return Response.json(
+      { error: updateError.message },
+      { status: 500 }
+    );
   }
 
   return Response.json({ ok: true });
