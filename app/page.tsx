@@ -20,6 +20,7 @@ export default async function Page() {
         initialQuestions={questions}
         initialHasMore={hasMore}
       />
+      
     </main>
   );
 }

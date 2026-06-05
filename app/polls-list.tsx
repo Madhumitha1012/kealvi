@@ -24,7 +24,6 @@ export default function PollsList() {
   }, []);
 
   async function vote(optionId: string) {
-    // optimistic UI update
     setPolls((prev) =>
       prev.map((poll) => ({
         ...poll,
@@ -42,22 +41,32 @@ export default function PollsList() {
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Polls</h2>
+    <div className="mb-8 space-y-6">
+      <h2 className="text-2xl font-bold text-pink-400">
+        Polls
+      </h2>
 
       {polls.map((poll) => (
-        <div key={poll.id} className="rounded-lg border p-4 space-y-2">
-          <h3 className="font-medium">{poll.question}</h3>
+        <div
+          key={poll.id}
+          className="rounded-2xl border border-pink-500/20 bg-[#16161d] p-5 shadow-lg"
+        >
+          <h3 className="mb-4 text-lg font-semibold text-white">
+            {poll.question}
+          </h3>
 
-          <div className="space-y-2">
+          <div className="space-y-3">
             {poll.poll_options.map((opt) => (
               <button
                 key={opt.id}
                 onClick={() => vote(opt.id)}
-                className="flex w-full justify-between rounded-md border px-3 py-2 hover:bg-gray-50"
+                className="flex w-full items-center justify-between rounded-xl border border-pink-500/20 bg-black/30 px-4 py-3 text-left text-white transition hover:border-pink-400 hover:bg-pink-500/10"
               >
                 <span>{opt.option_text}</span>
-                <span>{opt.votes} votes</span>
+
+                <span className="rounded-lg bg-pink-500/20 px-3 py-1 text-sm text-pink-300">
+                  {opt.votes} votes
+                </span>
               </button>
             ))}
           </div>
