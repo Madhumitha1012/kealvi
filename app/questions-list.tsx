@@ -72,7 +72,7 @@ export default function QuestionsList({
   setImproving(true);
 
   try {
-    const res = await fetch("/api/improve-question", {
+    const res = await fetch("/api/improve", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
