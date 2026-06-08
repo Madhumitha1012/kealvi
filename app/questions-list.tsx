@@ -8,6 +8,7 @@ type Question = {
   body: string;
   author: string | null;
   votes: number;
+  aiAnswer?: string;
 };
 
 export default function QuestionsList({
@@ -23,6 +24,7 @@ export default function QuestionsList({
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [loading, setLoading] = useState(false);
   const [improving, setImproving] = useState(false);
+  const [askingAI, setAskingAI] = useState<string | null>(null);
 
   const [hydrated, setHydrated] = useState(false);
 
@@ -67,43 +69,80 @@ export default function QuestionsList({
   }
 
   async function improveQuestion() {
-  if (!draft.trim()) return;
+    if (!draft.trim()) return;
 
-  setImproving(true);
+    setImproving(true);
 
-  try {
-    const res = await fetch("/api/improve", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: draft,
-      }),
-    });
+    try {
+      const res = await fetch("/api/improve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: draft,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok) {
-      alert(data.error || "AI request failed");
-      return;
+      if (!res.ok) {
+        alert(data.error || "AI request failed");
+        return;
+      }
+
+      setDraft(data.improved);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to connect to AI");
+    } finally {
+      setImproving(false);
     }
-
-    setDraft(data.improved);
-  } catch (error) {
-    console.error(error);
-    alert("Failed to connect to AI");
-  } finally {
-    setImproving(false);
   }
-}
+
+  async function askAI(id: string, question: string) {
+    setAskingAI(id);
+
+    try {
+      const res = await fetch("/api/ask-ai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "AI request failed");
+        return;
+      }
+
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === id
+            ? {
+                ...q,
+                aiAnswer: data.answer,
+              }
+            : q
+        )
+      );
+    } catch (error) {
+      console.error(error);
+      alert("Failed to connect to AI");
+    } finally {
+      setAskingAI(null);
+    }
+  }
 
   async function upvote(id: string) {
     setQuestions((qs) =>
       qs.map((q) =>
-        q.id === id
-          ? { ...q, votes: q.votes + 1 }
-          : q
+        q.id === id ? { ...q, votes: q.votes + 1 } : q
       )
     );
 
@@ -120,9 +159,7 @@ export default function QuestionsList({
     if (!res.ok) {
       setQuestions((qs) =>
         qs.map((q) =>
-          q.id === id
-            ? { ...q, votes: q.votes - 1 }
-            : q
+          q.id === id ? { ...q, votes: q.votes - 1 } : q
         )
       );
     }
@@ -153,7 +190,6 @@ export default function QuestionsList({
         </p>
       </div>
 
-      {/* Ask Question */}
       <div className="rounded-2xl border border-pink-500/20 bg-[#16161d] p-5 shadow-lg">
         <div className="flex gap-3">
           <input
@@ -181,7 +217,6 @@ export default function QuestionsList({
         </div>
       </div>
 
-      {/* Search */}
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -189,16 +224,15 @@ export default function QuestionsList({
         className="w-full rounded-xl border border-pink-500/20 bg-[#16161d] px-4 py-3 text-white outline-none placeholder:text-gray-500"
       />
 
-      {/* Questions */}
       <ul className="space-y-4">
         {questions.map((q) => (
           <li
             key={q.id}
-            className="flex items-center gap-4 rounded-2xl border border-pink-500/20 bg-[#16161d] p-5 shadow-lg"
+            className="flex items-start gap-4 rounded-2xl border border-pink-500/20 bg-[#16161d] p-5 shadow-lg"
           >
             <button
               onClick={() => upvote(q.id)}
-              className="flex min-w-[56px] flex-col items-center rounded-xl border border-pink-500/30 bg-pink-500/10 px-3 py-2 font-mono text-pink-400 transition hover:bg-pink-500/20"
+              className="flex min-w-[60px] flex-col items-center rounded-xl border border-pink-500/30 bg-pink-500/10 px-3 py-2 font-mono text-pink-400 transition hover:bg-pink-500/20"
             >
               <span>▲</span>
               <span>{q.votes}</span>
@@ -214,12 +248,33 @@ export default function QuestionsList({
                   {q.author}
                 </p>
               )}
+
+              <button
+                onClick={() => askAI(q.id, q.body)}
+                disabled={askingAI === q.id}
+                className="mt-3 rounded-xl bg-purple-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-purple-700 disabled:opacity-50"
+              >
+                {askingAI === q.id
+                  ? "Thinking..."
+                  : "🤖 Ask AI"}
+              </button>
+
+              {q.aiAnswer && (
+  <div className="mt-3 rounded-xl border border-purple-500/30 bg-purple-500/10 p-4">
+    <p className="mb-2 text-xs font-semibold uppercase text-purple-300">
+      🤖 AI Answer
+    </p>
+
+    <p className="whitespace-pre-wrap text-gray-200">
+      {q.aiAnswer}
+    </p>
+  </div>
+)}
             </div>
           </li>
         ))}
       </ul>
 
-      {/* Load More */}
       {hasMore && (
         <button
           onClick={loadMore}

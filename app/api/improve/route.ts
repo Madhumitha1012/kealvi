@@ -6,18 +6,26 @@ const ai = new GoogleGenAI({
 
 export async function POST(req: Request) {
   try {
-    const { text } = await req.json();
+    const body = await req.json();
 
-    if (!text?.trim()) {
+    const text = body?.text;
+
+    if (!text || !text.trim()) {
       return Response.json(
-        { error: "Question text is required" },
-        { status: 400 }
+        {
+          error: "Question text is required",
+        },
+        {
+          status: 400,
+        }
       );
     }
 
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: `Rewrite the following question so it is clear, professional, and grammatically correct. Return ONLY the improved question.
+      contents: `Rewrite the following question so it is clear, professional, and grammatically correct.
+
+Return ONLY the improved question.
 
 Question:
 ${text}`,
@@ -27,13 +35,15 @@ ${text}`,
       improved: response.text,
     });
   } catch (error) {
-    console.error("Gemini Error:", error);
+    console.error("Improve Error:", error);
 
     return Response.json(
       {
         error: "Failed to improve question",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
